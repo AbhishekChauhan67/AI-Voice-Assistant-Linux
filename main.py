@@ -1,24 +1,48 @@
 # 07 Sep, 2026
 # from src.TTS.PYTTSX3 import TextToSpeech, TTSConfig
 
-
-# tts = TextToSpeech(config=TTSConfig(rate=130, volume=0.6, voice="gmw/en-us"))
-# tts("Today is very good morning.")
-
 # 08 Sep, 2026
+# Piper-tts
 
-from src.TTS.PIPER import PiperTTS
-from src.TTS.PIPER.config import PIPER_MODEL
+# 09 Sep, 2026
+# Adding Control Logic and KeyBoard Interrupt
+
+from src.stt.fast_whisper.settings import AppConfig
+from src.stt.fast_whisper.stt import STT
+from src.wake_word.detect import Detect
 
 
-def main() -> None:
 
-    tts = PiperTTS(
-        model_path=PIPER_MODEL,
-    )
 
-    tts.speak("Hello. This is Piper text to speech.")
+
+def TEST() -> None:
+    config = AppConfig()
+    detect = Detect("Hey Mom")
+    stt = STT(config.stt)
+
+    try:
+        while True:
+            text = stt.listen()
+
+            if text:
+                if detect.check(text):
+                    print("Wake Word detected")
+                else:
+                    print("No wake Word.")
+                print(f"You: {text}")
+            else:
+                print("No speech detected.")
+
+            if text and text.lower() in ["exit", "quit", "stop"]:
+                print("Exiting...")
+                break
+
+    except KeyboardInterrupt:
+        print("\nStopping...")
+    finally:
+        # stt.close()
+        print("Exiting...")
 
 
 if __name__ == "__main__":
-    main()
+    TEST()
