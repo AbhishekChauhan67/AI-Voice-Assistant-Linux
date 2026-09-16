@@ -7,8 +7,8 @@
 # 09 Sep, 2026
 # Adding Control Logic and KeyBoard Interrupt
 
-from src.stt.fast_whisper.settings import AppConfig
-from src.stt.fast_whisper.stt import STT
+from stt.settings import AppConfig
+from stt.stt import STT
 from src.wake_word.detect import Detect
 
 
