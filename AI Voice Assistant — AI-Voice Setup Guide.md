@@ -60,7 +60,7 @@ python --version
 
 ---
 
-# 3. Install Piper TTS
+# 3. Install All libs
 
 Piper is used for **Text-to-Speech (TTS)**.
 
@@ -69,14 +69,9 @@ Piper is used for **Text-to-Speech (TTS)**.
 Install Piper:
 
 ```bash
-pip install piper-tts
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-Verify:
-
-```bash
-python -m piper --help
-```
 
 ---
 
@@ -142,15 +137,9 @@ ffplay test.wav
 
 ---
 
-# 4. Install faster-whisper
+# 4. Verify faster-whisper
 
 `faster-whisper` is used for **Speech-to-Text (STT)**.
-
-Install:
-
-```bash
-pip install faster-whisper
-```
 
 Verify:
 
@@ -162,19 +151,14 @@ pip show faster-whisper
 
 ## 4.1 Basic faster-whisper Test
 
-Create:
+src/stt/model.py:
 
-```bash
-touch test_whisper.py
-```
-
-Add:
 
 ```python
 from faster_whisper import WhisperModel
 
 model = WhisperModel(
-    "small",
+    "medium",
     device="cpu",
     compute_type="int8"
 )
@@ -190,7 +174,7 @@ for segment in segments:
 Run:
 
 ```bash
-python test_whisper.py
+python src/stt/model.py
 ```
 
 The first execution may download the Whisper model.
@@ -214,16 +198,6 @@ For a CPU-based assistant, start with:
 ```python
 WhisperModel(
     "base",
-    device="cpu",
-    compute_type="int8"
-)
-```
-
-For better accuracy:
-
-```python
-WhisperModel(
-    "small",
     device="cpu",
     compute_type="int8"
 )
@@ -331,113 +305,7 @@ To exit:
 
 ---
 
-# 8. Test Ollama API
-
-Ollama normally provides a local API.
-
-Check:
-
-```bash
-curl http://localhost:11434/api/tags
-```
-
-You should receive information about installed models.
-
----
-
-# 9. Install Python Ollama Library
-
-Inside the virtual environment:
-
-```bash
-pip install ollama
-```
-
-Verify:
-
-```bash
-pip show ollama
-```
-
----
-
-# 10. Test Ollama from Python
-
-Create:
-
-```bash
-touch test_ollama.py
-```
-
-Add:
-
-```python
-from ollama import chat
-
-response = chat(
-    model="llama3.2",
-    messages=[
-        {
-            "role": "user",
-            "content": "Hello, introduce yourself."
-        }
-    ]
-)
-
-print(response.message.content)
-```
-
-Run:
-
-```bash
-python test_ollama.py
-```
-
----
-
-# 11. Recommended Project Model Structure
-
-Keep downloaded AI models outside your source code where possible.
-
-Example:
-
-```text
-AI Voice Assistant/
-│
-├── models/
-│   ├── piper/
-│   │   ├── en_US-lessac-medium.onnx
-│   │   └── en_US-lessac-medium.onnx.json
-│   │
-│   └── whisper/
-│
-├── src/
-│   ├── assistant.py
-│   │
-│   ├── stt/
-│   │   └── whisper.py
-│   │
-│   ├── tts/
-│   │   └── piper.py
-│   │
-│   ├── llm/
-│   │   └── ollama.py
-│   │
-│   ├── wakeword/
-│   │
-│   └── database/
-│       └── history.py
-│
-├── tests/
-│
-├── requirements.txt
-├── .env
-└── README.md
-```
-
----
-
-# 12. Python Requirements
+# 11. Python Requirements
 
 A basic `requirements.txt` can contain:
 
@@ -451,18 +319,6 @@ Install everything:
 
 ```bash
 pip install -r requirements.txt
-```
-
-If you also use audio recording/playback:
-
-```bash
-pip install sounddevice
-```
-
-For serial communication:
-
-```bash
-pip install pyserial
 ```
 
 ---
@@ -516,7 +372,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 
 # Install Python packages
-pip install faster-whisper piper-tts ollama sounddevice pyserial
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # Install Ollama on Arch
 sudo pacman -S ollama
@@ -529,107 +385,6 @@ ollama pull llama3.2
 
 # Check installation
 ollama list
-```
-
----
-
-# 15. Quick Test
-
-### Piper
-
-```bash
-echo "Hello from Piper." | \
-python -m piper \
---model models/piper/en_US-lessac-medium.onnx \
---output_file test.wav
-```
-
-### faster-whisper
-
-```bash
-python test_whisper.py
-```
-
-### Ollama
-
-```bash
-ollama run llama3.2
-```
-
-### Python Ollama
-
-```bash
-python test_ollama.py
-```
-
----
-
-# 16. Troubleshooting
-
-## Piper cannot be imported
-
-Check:
-
-```bash
-pip show piper-tts
-```
-
-Make sure the virtual environment is active:
-
-```bash
-source .venv/bin/activate
-```
-
-Then:
-
-```bash
-pip install -U piper-tts
-```
-
----
-
-## faster-whisper model download is slow
-
-The first execution downloads the selected Whisper model.
-
-After downloading, subsequent executions can use the cached model.
-
-For a CPU system, try:
-
-```python
-WhisperModel(
-    "base",
-    device="cpu",
-    compute_type="int8"
-)
-```
-
----
-
-## Ollama service is not running
-
-Check:
-
-```bash
-systemctl status ollama
-```
-
-Start it:
-
-```bash
-sudo systemctl start ollama
-```
-
-Enable it at boot:
-
-```bash
-sudo systemctl enable ollama
-```
-
-Test:
-
-```bash
-curl http://localhost:11434/api/tags
 ```
 
 ---
@@ -685,8 +440,7 @@ Once the complete pipeline works:
 
 ```text
 Microphone
-    ↓
-Wake Word
+
     ↓
 Speech-to-Text
     ↓
