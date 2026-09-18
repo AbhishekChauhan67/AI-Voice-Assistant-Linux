@@ -1,15 +1,17 @@
+import logging
 import os
 
-try:
-    from faster_whisper import WhisperModel
-except ModuleNotFoundError:  # pragma: no cover - optional runtime dependency
-    WhisperModel = None
+from faster_whisper import WhisperModel
+
 
 from .exception import (
     STTModelError,
     STTRecognitionError,
 )
 from .settings import STTConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 class SpeechRecognizer:
@@ -32,9 +34,9 @@ class SpeechRecognizer:
 
         if os.path.exists(model_name):
             model_name = os.path.abspath(model_name)
-            print(f"Loading local Whisper model from: {model_name}")
+            logger.info("Loading local Whisper model from %s", model_name)
         else:
-            print(f"Loading Whisper model: {model_name}")
+            logger.info("Loading Whisper model: %s", model_name)
 
         try:
             self.model = WhisperModel(
@@ -43,9 +45,10 @@ class SpeechRecognizer:
                 compute_type=self.config.compute_type,
             )
 
-            print("Whisper ready.")
+            logger.info("Whisper model ready")
 
         except Exception as exc:
+            logger.exception("Could not load Whisper model")
             raise STTModelError(
                 f"Could not load Whisper model: {exc}"
             ) from exc
@@ -100,9 +103,12 @@ class SpeechRecognizer:
                 if text:
                     texts.append(text)
 
-            return " ".join(texts).strip()
+            result = " ".join(texts).strip()
+            logger.info("Transcription complete: %d characters", len(result))
+            return result
 
         except Exception as exc:
+            logger.exception("Speech recognition failed")
             raise STTRecognitionError(
                 f"Speech recognition failed: {exc}"
             ) from exc

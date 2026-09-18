@@ -1,35 +1,29 @@
+import logging
 import time
 
-from tts.config import AUDIO_DEVICE, PIPER_MODEL
-from tts.controller import PiperController
-from src.tts.piper import PiperTTS
+from .config import AUDIO_DEVICE, PIPER_MODEL
+from .piper import PiperTTS
 
-def tts() -> None:
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def main() -> None:
+    logger.info("Starting TTS demo")
     tts = PiperTTS(
         model_path=PIPER_MODEL,
         audio_device=AUDIO_DEVICE,
     )
 
-    controller = PiperController(tts)
-
-    controller.start()
-
     try:
-        print("Starting Piper...")
-        print("CTRL+D -> Stop")
-        print()
-
-        tts.speak("Hello. I am Anna. ")
-
-        while tts.player.is_playing():
+        tts.speak("Hello. I am Anna.")
+        while tts.is_playing():
             time.sleep(0.1)
-
-    except KeyboardInterrupt:
-        print("\nStopping...")
-
     finally:
-        controller.stop()
-        
+        logger.info("Stopping TTS demo")
+        tts.stop()
+
+
 if __name__ == "__main__":
-    tts()
+    main()

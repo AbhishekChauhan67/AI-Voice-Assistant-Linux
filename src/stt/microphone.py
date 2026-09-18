@@ -1,11 +1,13 @@
+import logging
+
 import numpy as np
 
-try:
-    import sounddevice as sd
-except ModuleNotFoundError:  # pragma: no cover - optional runtime dependency
-    sd = None
+import sounddevice as sd
 
 from .exception import STTMicrophoneError
+
+
+logger = logging.getLogger(__name__)
 
 
 class Microphone:
@@ -35,7 +37,7 @@ class Microphone:
 
         def callback(indata, frames, time, status):
             if status:
-                print(f"Microphone status: {status}")
+                logger.warning("Microphone status: %s", status)
             self._chunks.append(indata.copy())
 
         try:
@@ -47,10 +49,11 @@ class Microphone:
                 callback=callback,
             )
             self._stream.start()
-            print("Listening...")
+            logger.info("Started microphone recording")
         except Exception as exc:
             self._stream = None
             self._chunks = []
+            logger.exception("Failed to start microphone recording")
             raise STTMicrophoneError(
                 f"Failed to start microphone recording: {exc}"
             ) from exc
@@ -66,11 +69,14 @@ class Microphone:
             stream.stop()
             stream.close()
             if not self._chunks:
+                logger.info("Stopped microphone recording with no audio")
                 return np.array([], dtype="float32")
 
             audio = np.concatenate(self._chunks, axis=0)
+            logger.info("Stopped microphone recording: %d samples", audio.shape[0])
             return np.squeeze(audio)
         except Exception as exc:
+            logger.exception("Failed to stop microphone recording")
             raise STTMicrophoneError(
                 f"Failed to stop microphone recording: {exc}"
             ) from exc
@@ -84,7 +90,7 @@ class Microphone:
             )
 
         try:
-            print("Listening...")
+            logger.info("Recording microphone audio for %.1f seconds", seconds)
 
             audio = sd.rec(
                 int(seconds * self.sample_rate),
@@ -96,9 +102,12 @@ class Microphone:
 
             sd.wait()
 
-            return np.squeeze(audio)
+            result = np.squeeze(audio)
+            logger.info("Microphone recording complete: %d samples", result.shape[0])
+            return result
 
         except Exception as exc:
+            logger.exception("Failed to record microphone audio")
             raise STTMicrophoneError(
                 f"Failed to record microphone audio: {exc}"
             ) from exc

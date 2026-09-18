@@ -3,10 +3,14 @@
 # Piper -> Bytes -> RawOutputStream -> Speaker
 
 import threading
+import logging
 
 import sounddevice as sd
 
 from .exception import TTS_PLAYBACK_ERROR
+
+
+logger = logging.getLogger(__name__)
 
 
 class AudioPlayer:
@@ -30,6 +34,7 @@ class AudioPlayer:
         )
 
         self._thread.start()
+        logger.info("Started TTS playback")
 
     def _play(self, audio_stream) -> None:
 
@@ -54,6 +59,7 @@ class AudioPlayer:
                 self._stream.write(chunk.audio_int16_bytes)
 
         except Exception as ex:
+            logger.exception("Failed to play audio")
             raise TTS_PLAYBACK_ERROR("Failed to play audio.") from ex
         finally:
             self._close_stream()
@@ -65,12 +71,15 @@ class AudioPlayer:
 
     def stop(self) -> None:
         """Stop Playback."""
+        was_playing = self.is_playing()
         self._stop_event.set()
 
         if self._thread is not None and self._thread is not threading.current_thread():
             self._thread.join()
 
         self._thread = None
+        if was_playing:
+            logger.info("Stopped TTS playback")
 
     def _close_stream(self) -> None:
         if self._stream is not None:

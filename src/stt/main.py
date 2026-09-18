@@ -1,3 +1,4 @@
+import logging
 import sys
 import termios
 import tty
@@ -6,19 +7,22 @@ from .settings import AppConfig
 from .stt import STT
 
 
-class FastWhisperApp:
-    def __init__(self) -> None:
-        self.stt = STT(AppConfig().stt)
-        self.recording = False
-        self.running = True
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
-    def _read_key(self) -> str:
+
+def main() -> None:
+    logger.info("Starting STT demo")
+    stt = STT(AppConfig().stt)
+    print("Press SPACE to record and stop. Press Q to quit.")
+
+    while True:
         file_descriptor = sys.stdin.fileno()
         previous_settings = termios.tcgetattr(file_descriptor)
 
         try:
             tty.setcbreak(file_descriptor)
-            return sys.stdin.read(1)
+            key = sys.stdin.read(1).lower()
         finally:
             termios.tcsetattr(
                 file_descriptor,
@@ -26,70 +30,39 @@ class FastWhisperApp:
                 previous_settings,
             )
 
-    def start_recording(self) -> None:
-        if self.recording:
-            return
-
-        self.stt.start_recording()
-        self.recording = True
-        print("Recording...")
-
-    def stop_recording(self) -> str:
-        if not self.recording:
-            return ""
-
-        print("Recording stopped. Recognizing...")
-
-        text = self.stt.stop_recording()
-
-        self.recording = False
-
-        if text:
-            print(f"You: {text}")
-        else:
-            print("No text recognized.")
-
-        return text
-
-    def handle_key(self, key: str) -> None:
-        key = key.lower()
+        if key == "q":
+            logger.info("Stopping STT demo")
+            break
 
         if key == " ":
-            if self.recording:
-                self.stop_recording()
-            else:
-                self.start_recording()
+            logger.info("Starting manual recording")
+            stt.start_recording()
+            print("Recording...")
 
-        elif key == "q":
-            self.running = False
+            while True:
+                file_descriptor = sys.stdin.fileno()
+                previous_settings = termios.tcgetattr(file_descriptor)
 
-    def run(self) -> None:
-        print("Fast Whisper STT")
-        print("Press SPACE to start recording.")
-        print("Press SPACE again to stop and transcribe.")
-        print("Press Q or CTRL+C to exit.")
+                try:
+                    tty.setcbreak(file_descriptor)
+                    key = sys.stdin.read(1).lower()
+                finally:
+                    termios.tcsetattr(
+                        file_descriptor,
+                        termios.TCSADRAIN,
+                        previous_settings,
+                    )
 
-        try:
-            while self.running:
-                key = self._read_key()
-                self.handle_key(key)
+                if key == " ":
+                    logger.info("Stopping manual recording")
+                    text = stt.stop_recording()
+                    print(f"Recognized: {text or 'nothing'}")
+                    break
 
-        except KeyboardInterrupt:
-            pass
-
-        finally:
-            self.close()
-
-    def close(self) -> None:
-        if self.recording:
-            self.stop_recording()
-
-        print("\nExiting...")
-
-
-def main() -> None:
-    app = FastWhisperApp()
-    app.run()
+                if key == "q":
+                    logger.info("Exiting STT demo during recording")
+                    print("Exiting STT demo.")
+                    return
 
 
 if __name__ == "__main__":
