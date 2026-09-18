@@ -1,1 +1,0 @@
-"""Local voice assistant package."""

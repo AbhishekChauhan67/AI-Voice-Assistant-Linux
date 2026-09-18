@@ -7,16 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 logger = logging.getLogger(__name__)
 
-if __package__ in (None, ""):
-	project_root = Path(__file__).resolve().parent.parent
-	src_dir = Path(__file__).resolve().parent
-	sys.path.insert(0, str(project_root))
-	sys.path.insert(0, str(src_dir))
-
-try:
-	from chat_window import ChatWindow
-except ModuleNotFoundError:
-	from src.chat_window import ChatWindow
+from gui.chat_window import ChatWindow
 
 
 def main() -> None:

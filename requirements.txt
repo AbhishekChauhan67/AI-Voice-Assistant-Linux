@@ -1,6 +1,8 @@
 faster-whisper==1.2.1
 numpy==2.5.3
-ollama
+ollama==0.6.2
 piper-tts==1.8.0
-PySide6
+PySide6==6.11.2
+PySide6_Addons==6.11.2
+PySide6_Essentials==6.11.2
 sounddevice==0.5.6

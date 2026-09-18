@@ -38,7 +38,7 @@ class PiperTTS:
             raise TTS_ERROR(f"Failed to load Piper model: {ex}") from ex
 
     def speak(self, text: str) -> None:
-        clean_for_piper(text=text)
+        text = clean_for_piper(text=text)
         if not text or not text.strip():
             logger.debug("Ignoring empty TTS input")
             return

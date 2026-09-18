@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal, Slot
 from PySide6.QtGui import QFont
@@ -15,9 +16,13 @@ from PySide6.QtWidgets import (
 )
 
 try:
-	from gui_worker import AssistantWorker
+	from core.db import ChatHistory
 except ModuleNotFoundError:
-	from src.gui_worker import AssistantWorker
+	from src.core.db import ChatHistory
+
+from .gui_worker import AssistantWorker
+from .history_dialog import HistoryDialog
+from .styles import CHAT_WINDOW_STYLESHEET
 
 
 logger = logging.getLogger(__name__)
@@ -34,15 +39,18 @@ class ChatWindow(QMainWindow):
 		self.resize(760, 620)
 		self.setMinimumSize(520, 420)
 
+		self.history_db = ChatHistory(str(Path(__file__).resolve().parents[2] / "history.db"))
+		self.history_dialog = None
+		self.history_view = None
+
 		self.worker_thread = QThread(self)
-		self.worker = AssistantWorker(model_name="qwen3:4b")
+		self.worker = AssistantWorker(model_name="qwen3:1.7b")
 		self.worker.moveToThread(self.worker_thread)
 		self.worker_thread.started.connect(self.worker.initialize)
 		self.text_requested.connect(self.worker.ask)
 		self.voice_requested.connect(self.worker.listen)
 		self.worker.ready.connect(self._assistant_ready)
 		self.worker.user_message.connect(self._add_user_message)
-		self.worker.thinking.connect(self._add_thinking)
 		self.worker.reply.connect(self._add_assistant_message)
 		self.worker.status.connect(self._handle_status)
 		self.worker.error.connect(self._show_error)
@@ -51,21 +59,7 @@ class ChatWindow(QMainWindow):
 		self.worker_thread.start()
 
 	def _build_ui(self) -> None:
-		self.setStyleSheet(
-			"""
-			QMainWindow { background: #f5f7fb; }
-			QLabel#title { color: #172033; font-size: 22px; font-weight: 700; }
-			QLabel#status { color: #647089; font-size: 13px; }
-			QListWidget { background: #ffffff; border: 1px solid #dce2ed; border-radius: 12px; padding: 12px; }
-			QListWidget::item { padding: 10px; color: #202a3d; }
-			QLineEdit { background: #ffffff; border: 1px solid #cbd4e3; border-radius: 10px; padding: 12px; font-size: 14px; }
-			QPushButton { border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 600; }
-			QPushButton#send { background: #3264d6; color: white; }
-			QPushButton#voice { background: #e6edff; color: #244da9; }
-			QPushButton#stop { background: #ffe8e6; color: #b4332d; }
-			QPushButton:disabled { background: #e4e8ef; color: #8b94a5; }
-			"""
-		)
+		self.setStyleSheet(CHAT_WINDOW_STYLESHEET)
 
 		central = QWidget()
 		layout = QVBoxLayout(central)
@@ -73,12 +67,21 @@ class ChatWindow(QMainWindow):
 		layout.setSpacing(14)
 
 		header = QHBoxLayout()
+		self.quit_button = QPushButton("×")
+		self.quit_button.setObjectName("close")
+		self.quit_button.setToolTip("Close Anna")
+		self.quit_button.clicked.connect(self.close)
 		title = QLabel("Anna")
 		title.setObjectName("title")
 		self.status_label = QLabel("Starting...")
 		self.status_label.setObjectName("status")
+		self.history_button = QPushButton("History")
+		self.history_button.setObjectName("history")
+		self.history_button.clicked.connect(self._show_history)
+		header.addWidget(self.quit_button)
 		header.addWidget(title)
 		header.addStretch()
+		header.addWidget(self.history_button)
 		header.addWidget(self.status_label)
 		layout.addLayout(header)
 
@@ -101,7 +104,7 @@ class ChatWindow(QMainWindow):
 		self.stop_button.setObjectName("stop")
 		self.stop_button.setToolTip("Stop Anna speaking")
 		self.stop_button.setVisible(False)
-		self.stop_button.clicked.connect(self.worker.stop_speech)
+		self.stop_button.clicked.connect(self._stop_speech)
 		controls.addWidget(self.input, 1)
 		controls.addWidget(self.voice_button)
 		controls.addWidget(self.stop_button)
@@ -124,10 +127,6 @@ class ChatWindow(QMainWindow):
 	@Slot(str)
 	def _add_assistant_message(self, text: str) -> None:
 		self._add_message(f"Anna: {text}")
-
-	@Slot(str)
-	def _add_thinking(self, text: str) -> None:
-		self._add_message(f"Anna thinking: {text}")
 
 	def _add_message(self, text: str) -> None:
 		self.messages.addItem(QListWidgetItem(text))
@@ -154,6 +153,16 @@ class ChatWindow(QMainWindow):
 		self.stop_button.setEnabled(False)
 		self._add_message(message)
 
+	def _show_history(self) -> None:
+		if self.history_dialog is None:
+			self.history_dialog = HistoryDialog(self)
+
+		history_rows = self.history_db.get_recent(20)
+		self.history_dialog.populate(history_rows)
+		self.history_dialog.show()
+		self.history_dialog.raise_()
+		self.history_dialog.activateWindow()
+
 	def _send_text(self) -> None:
 		text = self.input.text().strip()
 		if not text:
@@ -167,6 +176,10 @@ class ChatWindow(QMainWindow):
 		logger.info("Starting voice input from GUI")
 		self._set_controls_enabled(False)
 		self.voice_requested.emit()
+
+	def _stop_speech(self) -> None:
+		logger.info("Stopping Anna speech from GUI")
+		self.worker.stop_speech()
 
 	def _set_controls_enabled(self, enabled: bool) -> None:
 		self.input.setEnabled(enabled)

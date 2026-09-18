@@ -1,15 +1,19 @@
 import logging
 import threading
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+
 try:
+	from core.db import ChatHistory
 	from llm.ollama_client import LocalLLM
 	from stt import STT
 	from stt.settings import AppConfig
 	from tts.config import AUDIO_DEVICE, PIPER_MODEL
 	from tts.piper import PiperTTS
 except ModuleNotFoundError:
+	from src.core.db import ChatHistory
 	from src.llm.ollama_client import LocalLLM
 	from src.stt import STT
 	from src.stt.settings import AppConfig
@@ -23,7 +27,6 @@ logger = logging.getLogger(__name__)
 class AssistantWorker(QObject):
 	ready = Signal()
 	reply = Signal(str)
-	thinking = Signal(str)
 	user_message = Signal(str)
 	status = Signal(str)
 	error = Signal(str)
@@ -34,6 +37,7 @@ class AssistantWorker(QObject):
 		self.llm = None
 		self.stt = None
 		self.tts = None
+		self.history_db = ChatHistory(str(Path(__file__).resolve().parents[2] / "history.db"))
 		self._stop_event = threading.Event()
 
 	@Slot()
@@ -90,11 +94,10 @@ class AssistantWorker(QObject):
 		try:
 			logger.info("Processing assistant request")
 			self.user_message.emit(text)
-			self.status.emit("Thinking...")
+			self.status.emit("Processing...")
 			response = llm.ask(text)
-			if llm.thinking:
-				self.thinking.emit(llm.thinking)
 			if response:
+				self.history_db.add(text, response, 0.0)
 				self.reply.emit(response)
 				self.status.emit("Speaking...")
 				tts.speak(response)

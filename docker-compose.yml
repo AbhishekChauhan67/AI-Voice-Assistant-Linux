@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-voice-assistant
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app/src
+      - WHISPER_MODEL=small
+      - WHISPER_LANGUAGE=en
+      - WHISPER_DEVICE=cpu
+      - WHISPER_COMPUTE_TYPE=int8
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - .:/app
+      - ./models:/app/models
+    stdin_open: true
+    tty: true
+    command: python src/assistant.py

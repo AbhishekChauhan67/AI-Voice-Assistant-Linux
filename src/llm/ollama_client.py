@@ -12,15 +12,18 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+def _request_chat(model: str, messages: list[Message]):
+    return chat(model=model, messages=messages)
+
 class LocalLLM:
     def __init__(
         self,
-        model: str = "qwen3:4b",
+        model: str = "qwen3:1.7b",
         system_prompt: str = "You are a helpful voice assistant. Gives Answer very quickly.",
     ) -> None:
         self.model = model
         self.system_prompt = system_prompt
-        self.thinking = ""
 
         self.messages: list[Message] = [
             Message(
@@ -44,19 +47,16 @@ class LocalLLM:
         )
         
         try: 
-            response = chat(
-                model=self.model,
-                messages=self.messages,
-                think=True,
-            )
+            response = _request_chat(self.model, self.messages)
             
             elapsed = time.perf_counter() - start_time
+            
+            
 
             logger.info("[LLM] Completed in %.2f seconds", elapsed)
 
             message = response["message"]
-            self.thinking = message.get("thinking", "")
-            answer = message["content"]
+            answer = message.get("content", "")
 
             self.messages.append(
                 Message(
